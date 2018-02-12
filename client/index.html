@@ -1,13 +1,109 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+	<script src="/socket.io/socket.io.js"></script>
     <script src="https://npmcdn.com/babel-core@5.8.38/browser.min.js"></script>
     <script type="text/babel" >
         "use strict";
+		
+		let socket;
+		
+		var canvas, ctx;
+		
+		const user = `user${(Math.floor((Math.random()*1000)) + 1)};`
+		
+		let draws = {};
+		
+		let color;
+		
+		
+		
+		const init = () => {
+			canvas = document.querySelector('#mainCanvas');
+			ctx = canvas.getContext('2d');
+	
+			socket = io.connect();
+			
+			socket.on ('connect', () => {
+				setup();
+				
+			setInterval( ()=> {
+				const time = new Date().getTime();
+			
+				draws[user].lastUpdate = time;
+				draws[user].x += 10;
+			
+				socket.emit('draw', {name: user, coords: draws[user]});
+			
+				draw();
+			}, 3000);
+				
+			});
+			
+			socket.on('updated', handleMessage);
+			
+		};
+		
+		const setup = () => {
+			const time = new Date().getTime();
+			let x = Math.floor(Math.random() * (500 - 10) + 10); //random x position
+			let y = Math.floor(Math.random() * (500 - 10) + 10); //random y position
+			draws[user] = {lastUpdate: time, x: x, y: y, width: 100, height: 100};
+		};
+		
+		const handleMessage = (data) => {
+			if (!draws[data.name]) {
+				draws[data.name] = data.coords;
+			} else if (data.coords.lastUpdate > draws[data.name].lastUpdate) {
+				draws[data.name] = data.coords;
+			}
+			
+			draw();
+		};
+		
+		const draw = () => {
+			ctx.clearRect(0,0, canvas.width, canvas.height);
+			
+			let keys = Object.keys(draws);
+			
+			for (let i = 0; i < keys.length; i++) {
+				let drawCall = draws[keys[i]];
+				
+				//Check if the drawcall in our array is us
+				if (draws[user] == drawCall) {
+					color = 'blue'; //if you then blue
+				} else {
+					color = 'red';// if not, then redot
+				}
+				
+				ctx.fillStyle = color;
+							
+				ctx.fillRect(drawCall.x, drawCall.y, drawCall.width, drawCall.height);		
+				ctx.beginPath();
+				ctx.lineWidth = "3";
+				ctx.strokeStyle = "black";
+				ctx.rect(drawCall.x, drawCall.y, drawCall.width, drawCall.height);
+				ctx.stroke();
+			}		
+		};
+
+		window.onload = init;
     
     </script>
+	<style>
+	  #mainCanvas {
+         background: #ffffff;
+         position:absolute;
+         z-index: 0;
+         left: 10px;
+         top: 10px;
+         box-shadow: 4px 4px 8px rgba(0,0,0,0.5);
+      }
+	  </style>
 </head>
 <body>
+
+<canvas id="mainCanvas" width="750" height="500">:c</canvas>
 
 </body>
 </html>
